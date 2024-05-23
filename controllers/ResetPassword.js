@@ -26,6 +26,9 @@ exports.resetPasswordToken = async (req,res) =>{
                            },
                            {new:true} ); //to get updated list in return 
 
+    console.log("DETAILS", updatedDetails);
+
+
 
 
 //create url

@@ -1,5 +1,5 @@
 const Course = require("../models/Course");
-const Tag = require("../models/category");
+const Category = require("../models/category");
 const User = require("../models/User");
 const {uploadImageToCloudinary} = require("../utils/imageUploader");
 
@@ -7,18 +7,21 @@ const {uploadImageToCloudinary} = require("../utils/imageUploader");
 exports.createCourse = async (req,res) =>{
     try{
         //fetch data
-        const {courseName,courseDescription,whatYouWillLearn,price,tag}=req.body;
+        let {courseName,courseDescription,whatYouWillLearn,price,category,tag,status,instructions}=req.body;
         
         //get thumbnail
         const thumbnail = req.files.thumbnailImage;
 
         //validation
-        if(!courseName || !courseDescription || !whatYouWillLearn ||!price ||!tag ||!thumbnail){
+        if(!category || !courseName || !courseDescription || !whatYouWillLearn ||!price ||!tag ||!thumbnail){
             return res.status(400).json({
                 success:false,
                 message:'All fields are required',
             });
         }
+        if (!status || status === undefined) {
+			status = "Draft";
+		}
 
         //check for instructor
         const userId = req.user.id;
@@ -34,13 +37,13 @@ exports.createCourse = async (req,res) =>{
         }
 
         //check given tag is valid or not
-        const tagDetails = await Tag.findById(tag);
-        if(!tagDetails){
-            return res.status(404).json({
-                success:false,
-                message:'Tag Details not found',
-            });
-        }
+		const categoryDetails = await Category.findById(category);
+		if (!categoryDetails) {
+			return res.status(404).json({
+				success: false,
+				message: "Category Details Not Found",
+			});
+		}
         //Upload Image to Cloudinary
         const thumbnailImage = await uploadImageToCloudinary(thumbnail,process.env.FOLDER_NAME);
 
@@ -53,6 +56,8 @@ exports.createCourse = async (req,res) =>{
             price,
             tag:tagDetails._id,
             thumbnail:thumbnailImage.secure_url,
+            status: status,
+            instructions: instructions,
         });
         
         // add the new course to the user schema of Instructor
@@ -65,6 +70,16 @@ exports.createCourse = async (req,res) =>{
             },
             {new:true},
         );
+    // Add the new course to the Categories
+		await Category.findByIdAndUpdate(
+			{ _id: category },
+			{
+				$push: {
+					course: newCourse._id,
+				},
+			},
+			{ new: true }
+		);
 
         //return response
         return res.status(200).json({

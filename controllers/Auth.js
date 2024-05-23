@@ -29,7 +29,10 @@ exports.sendOTP = async (req,res)=>{
       console.log("OTP generated: ",otp);
 
       //checking if otp is unique or not
-       let result=await OTP.findOne({otp:otp});
+       const result=await OTP.findOne({otp:otp});
+       console.log("Result is Generate OTP Func");
+       console.log("OTP", otp);
+       console.log("Result", result);
       //bad practice as in Industry we use such otp generators which give unique otp codes only
        while(result){
         otp=otpGenerator(6,{
@@ -43,7 +46,7 @@ exports.sendOTP = async (req,res)=>{
        const otpPayload ={email,otp};
        //create an entry for otp
        const otpBody=await OTP.create(otpPayload);
-       console.log(otpBody);
+       console.log("OTP Body", otpBody);
 
        //return response as successful
        res.status(200).json({
@@ -52,7 +55,7 @@ exports.sendOTP = async (req,res)=>{
         otp,
        })
     }catch(err){
-      console.log(error);
+      console.log(err.message);
       return res.status(500).json({
         success:false,
         message:err.message,
@@ -127,7 +130,11 @@ exports.signUp = async (req,res)=>{
     }
     //Hash password
     const hashedPassword = await bcrypt.hash(password,10);
-    //entry created in DB
+
+     	// Create the user
+		let approved = "";
+		approved === "Instructor" ? (approved = false) : (approved = true);
+        //entry created in DB
 
     const profileDetails = await Profile.create({
         gender:null,
@@ -142,7 +149,7 @@ exports.signUp = async (req,res)=>{
         email,
         contactNumber,
         password:hashedPassword,
-        accountType,
+        accountType: accountType,
         additionalDetails:profileDetails._id,
         image:`https://api.dicebear.com/5.x/initials/svg?seed=${firstname} ${lastName}`,
     })
@@ -169,7 +176,7 @@ exports.login=async(req,res)=>{
         const {email,password}=req.body;
         // validation of data
         if(!email && !password){
-            return res.status(403).json({
+            return res.status(400).json({
                 success:false,
                 message:'All fields are required, please try again',
             })
@@ -183,7 +190,7 @@ exports.login=async(req,res)=>{
             });
         }
         // generate JWT,after password matching
-        if(bcrypt.compare(password,user.password)){
+        if( bcrypt.compare(password,user.password)){
            const payload={
             email:user.email,
             id:user._id,
@@ -271,12 +278,23 @@ try{
     user.password = hashedPassword;
     await user.save();     
     //send mail - password updated
-    const email = user.email;
-    const title = 'Password Updated Successfully';
-    const body = '<p>Your password has been updated successfully.</p>';
-    await mailSender(email, title, body);
+    try{
+        const email = user.email;
+        const title = 'Password Updated Successfully';
+        const body = '<p>Your password has been updated successfully.</p>';
+        await mailSender(email, title, body);
+
+    }catch(error){
+			// If there's an error sending the email, log the error and return a 500 (Internal Server Error) error
+			console.error("Error occurred while sending email:", error);
+			return res.status(500).json({
+				success: false,
+				message: "Error occurred while sending email",
+				error: error.message,
+			});
+    }
     //return response
-    res.status(200).json({
+    return res.status(200).json({
         sucess:true,
         message:'Password updated successfuly'
     })
