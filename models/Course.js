@@ -36,6 +36,10 @@ price:{
 thumbnail:{
     type:String,
 },
+tag:{
+  type:[String],
+  requires:true,
+},
 category: {
   type: mongoose.Schema.Types.ObjectId,
   // required: true,

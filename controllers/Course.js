@@ -54,7 +54,7 @@ exports.createCourse = async (req,res) =>{
             instructor:instructorDetails._id,
             whatYouWillLearn:whatYouWillLearn,
             price,
-            tag:tagDetails._id,
+            tag:tag,
             thumbnail:thumbnailImage.secure_url,
             status: status,
             instructions: instructions,
@@ -101,7 +101,7 @@ exports.createCourse = async (req,res) =>{
 
 //getAll Courses handler function
  
-exports.showAllCourses = async (req,res)=>{
+exports.getAllCourses = async (req,res)=>{
     try{
        const allCourses =await Course.find({},{courseName:true,
                                                price:true,
@@ -123,5 +123,51 @@ exports.showAllCourses = async (req,res)=>{
         message:'Cannot Fetch course data',
         error:err.message,
       })
+    }
+}
+
+//getCourse Details
+exports.getCourseDetails = async (req,res) =>{
+    try{
+       //get id
+       const {courseId} = req.body;
+       //find course details
+       const courseDetails = await Course.find(
+                                    {_id:courseId}
+                                  ).populate({
+                                    path:"instructor",
+                                    populate:{
+                                        path:"additionalDetails",
+                                    },
+                                  })
+                                  .populate("category")
+                                  .populate("ratingAndReviews")
+                                  .populate({
+                                    path:"courseContent",
+                                    populate:{
+                                        path:"subSection",
+                                    },
+                                  })
+                                  .exec();
+    
+    //validation
+    if(!courseDetails){
+        return res.status(400).json({
+            success:false,
+            message:`Could not find the course with course Id: ${courseId}`,
+        });
+    }      
+    //return response
+    return res.status(200).json({
+        success:true,
+        message:"Course Details fetched successfully",
+        data:courseDetails,
+    })                        
+    }catch(err){
+       console.log(err);
+       return res.status(500).json({
+        success:false,
+        message:err.message,
+       })
     }
 }

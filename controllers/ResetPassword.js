@@ -17,6 +17,7 @@ exports.resetPasswordToken = async (req,res) =>{
  }
  //generate token
  const token =crypto.randomUUID();  //generating token which will be attached with link of frontend so tha each user gets to new link
+ console.log(token);
  //update user by adding token and expiration time
  const updatedDetails = await User.findOneAndUpdate(
                          {email:email},

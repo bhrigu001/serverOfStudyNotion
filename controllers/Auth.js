@@ -4,7 +4,7 @@ const otpGenerator = require("otp-generator");
 const bcrypt = require("bcrypt");
 const jwt=require("jsonwebtoken");
 const mailSender = require('../utils/mailSender');
-
+const Profile = require("../models/Profile");
 //send OTP
 exports.sendOTP = async (req,res)=>{
     try{
@@ -29,13 +29,13 @@ exports.sendOTP = async (req,res)=>{
       console.log("OTP generated: ",otp);
 
       //checking if otp is unique or not
-       const result=await OTP.findOne({otp:otp});
+       let result=await OTP.findOne({otp:otp});
        console.log("Result is Generate OTP Func");
        console.log("OTP", otp);
        console.log("Result", result);
       //bad practice as in Industry we use such otp generators which give unique otp codes only
        while(result){
-        otp=otpGenerator(6,{
+        otp=otpGenerator.generate(6,{
             upperCaseAlphabets:false,
             lowerCaseAlphabets:false,
             specialChars:false,            
@@ -47,6 +47,7 @@ exports.sendOTP = async (req,res)=>{
        //create an entry for otp
        const otpBody=await OTP.create(otpPayload);
        console.log("OTP Body", otpBody);
+       
 
        //return response as successful
        res.status(200).json({
@@ -121,7 +122,7 @@ exports.signUp = async (req,res)=>{
             success:false,
             message:'OTP not found',
         })
-    }else if(otp!==recentOtp.otp){
+    }else if(otp!==recentOtp[0].otp){
         //Invalid Otp entered by user
         return res.status(400).json({
             success:false,
@@ -150,8 +151,9 @@ exports.signUp = async (req,res)=>{
         contactNumber,
         password:hashedPassword,
         accountType: accountType,
+        approved:approved,
         additionalDetails:profileDetails._id,
-        image:`https://api.dicebear.com/5.x/initials/svg?seed=${firstname} ${lastName}`,
+        image:`https://api.dicebear.com/5.x/initials/svg?seed=${firstName} ${lastName}`,
     })
     //return res
     return res.status(200).json({
@@ -190,7 +192,7 @@ exports.login=async(req,res)=>{
             });
         }
         // generate JWT,after password matching
-        if( bcrypt.compare(password,user.password)){
+        if(await bcrypt.compare(password,user.password)){
            const payload={
             email:user.email,
             id:user._id,
@@ -262,7 +264,7 @@ try{
     }
 
     // Verify the old password
-    const isMatch = bcrypt.compare(oldPassword, user.password);
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
 
     if (!isMatch) {
         return res.status(401).json({
